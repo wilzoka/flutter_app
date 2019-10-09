@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class View extends StatefulWidget {
   final String url;
@@ -20,8 +21,12 @@ class ViewState extends State<View> {
   }
 
   getConf() async {
+    final prefs = await SharedPreferences.getInstance();
     final response = await http.post(
         'http://172.10.30.33:8080/v/' + widget.url + '/config?issubview=false',
+        headers: {
+          'x-access-token': prefs.getString('token')
+        },
         body: {
           '_mobile': 'true',
         });
@@ -57,7 +62,8 @@ class ViewState extends State<View> {
                                     ' asd aksdjklas jdkla jskdlj aklsdj alksjdas dhasdj asd  akljsd'),
                           ]),
                     ),
-                  ),
+                  )
+                  ,
                 ],
               ),
               Row(
@@ -77,49 +83,10 @@ class ViewState extends State<View> {
                                     ' asd aksdjklas jdkla jskdlj aklsdj alksjdas dhasdj asd  akljsd'),
                           ]),
                     ),
-                  ),
+                  )
+                  ,
                 ],
-              ),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                          style: new TextStyle(
-                            color: Colors.black,
-                          ),
-                          children: <TextSpan>[
-                            TextSpan(
-                                text: 'Nome: ',
-                                style: TextStyle(fontWeight: FontWeight.bold)),
-                            TextSpan(
-                                text:
-                                    ' asd aksdjklas jdkla jskdlj aklsdj alksjdas dhasdj asd  akljsd'),
-                          ]),
-                    ),
-                  ),
-                ],
-              ),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                          style: new TextStyle(
-                            color: Colors.black,
-                          ),
-                          children: <TextSpan>[
-                            TextSpan(
-                                text: 'Nome: ',
-                                style: TextStyle(fontWeight: FontWeight.bold)),
-                            TextSpan(
-                                text:
-                                    ' asd aksdjklas jdkla jskdlj aklsdj alksjdas dhasdj asd  akljsd'),
-                          ]),
-                    ),
-                  ),
-                ],
-              ),
+              )
             ],
           ),
         ),

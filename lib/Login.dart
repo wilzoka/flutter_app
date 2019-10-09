@@ -82,7 +82,7 @@ class LoginScreenFormState extends State<LoginScreenForm> {
                             _perfomingLogin = true;
                           });
                           final response = await http
-                              .post('http://172.10.30.33:8080/login', body: {
+                              .post('http://192.168.0.103:8080/login', body: {
                             '_mobile': 'true',
                             'username': controllers['username'].text,
                             'password': controllers['password'].text
@@ -90,8 +90,10 @@ class LoginScreenFormState extends State<LoginScreenForm> {
                           try {
                             if (response.statusCode == 200) {
                               final json = jsonDecode(response.body);
-                              final prefs = await SharedPreferences.getInstance();
-                              prefs.setString('__menu', jsonEncode(json['menu']));
+                              final prefs =
+                                  await SharedPreferences.getInstance();
+                              prefs.setString('menu', jsonEncode(json['menu']));
+                              prefs.setString('token', json['token']);
                               Navigator.pushReplacementNamed(context, 'home');
                             } else {
                               Scaffold.of(context).removeCurrentSnackBar();

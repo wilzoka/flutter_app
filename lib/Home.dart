@@ -13,6 +13,10 @@ class HomeState extends State<Home> {
   String viewurl = '';
   String title = 'Home';
 
+  Map<String, dynamic> _currentConf = {};
+  Map<String, dynamic> _currentDatasource = {};
+  List<Widget> cards = List<Widget>();
+
   List<Widget> _menuItens = [
     DrawerHeader(
       child: Text('Drawer Header'),
@@ -22,19 +26,80 @@ class HomeState extends State<Home> {
     )
   ];
 
-  viewSelect(view) async {
-    final response = await http.post(
-        'http://172.10.30.33:8080/v/' + view['url'] + '/config?issubview=false',
-        body: {
-          '_mobile': 'true',
+  void viewSelect(view) async {
+    final prefs = await SharedPreferences.getInstance();
+    final responseConfig = await http.get(
+        'http://192.168.0.103:8080/v/' + view['url'] + '/config',
+        headers: {'x-access-token': prefs.getString('token')});
+    if (responseConfig.statusCode == 200) {
+      _currentConf = jsonDecode(responseConfig.body);
+      final responseDatasource = await http.post(
+          'http://192.168.0.103:8080/datasource',
+          headers: {'x-access-token': prefs.getString('token')},
+          body: {'view': view['url']});
+      if (responseDatasource.statusCode == 200) {
+        _currentDatasource = jsonDecode(responseDatasource.body);
+        setState(() {
+          buildDatasource();
+          title = view['description'];
         });
-    print(response.body);
-    print(response.statusCode);
-    print(view['url']);
+      }
+    }
   }
 
-  _loadMenu() async {
-    _getChild(item) {
+  adjustData(value) {
+    if (value is bool) {
+      return value ? 'Sim' : 'Não';
+    } else if (value == null) {
+      return '';
+    } else {
+      return value.toString();
+    }
+  }
+
+  void buildDatasource() {
+    cards = [];
+    for (int i = 0; i < _currentDatasource['data'].length; i++) {
+      List<Widget> rows = List<Widget>();
+      for (int c = 0; c < _currentConf['columns'].length; c++) {
+        rows.add(Row(children: <Widget>[
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                  style: new TextStyle(
+                    color: Colors.black,
+                  ),
+                  children: <TextSpan>[
+                    TextSpan(
+                        text: _currentConf['columns'][c]['title'].toString() +
+                            ': ',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    TextSpan(
+                        text: adjustData(_currentDatasource['data'][i]
+                            [_currentConf['columns'][c]['data']])),
+                  ]),
+            ),
+          )
+        ]));
+      }
+      cards.add(Card(
+        elevation: 2,
+        margin: const EdgeInsets.only(bottom: 10),
+        child: InkWell(
+          onTap: () {},
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Column(
+              children: rows,
+            ),
+          ),
+        ),
+      ));
+    }
+  }
+
+  void _loadMenu() async {
+    Widget _getChild(item) {
       if (item['children'] != null && item['children'].length > 0) {
         List<Widget> childrens = [];
         for (int i = 0; i < item['children'].length; i++) {
@@ -74,7 +139,12 @@ class HomeState extends State<Home> {
       appBar: AppBar(
         title: Text(title),
       ),
-      body: Center(),
+      body: Container(
+        margin: const EdgeInsets.all(10),
+        child: ListView(
+          children: cards,
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Add your onPressed code here!
