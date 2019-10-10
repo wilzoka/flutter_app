@@ -10,11 +10,11 @@ class View extends StatefulWidget {
 }
 
 class ViewState extends State<View> {
-  String viewurl = '';
   String title = 'Home';
 
   Map<String, dynamic> _currentConf = {};
   Map<String, dynamic> _currentDatasource = {};
+  Map _currentView = {};
   List<Widget> cards = List<Widget>();
 
   List<Widget> _menuItens = [
@@ -27,10 +27,7 @@ class ViewState extends State<View> {
   ];
 
   void viewSelect(view) async {
-    print((await Utils.getPreference('mainurl')) +
-        'v/' +
-        view['url'] +
-        '/config');
+    _currentView = view;
     final responseConfig = await http.get(
         (await Utils.getPreference('mainurl')) + 'v/' + view['url'] + '/config',
         headers: {'x-access-token': await Utils.getPreference('token')});
@@ -43,7 +40,7 @@ class ViewState extends State<View> {
       if (responseDatasource.statusCode == 200) {
         _currentDatasource = jsonDecode(responseDatasource.body);
         setState(() {
-          buildDatasource();
+          _buildDatasource();
           title = view['description'];
         });
       }
@@ -60,7 +57,7 @@ class ViewState extends State<View> {
     }
   }
 
-  void buildDatasource() {
+  void _buildDatasource() {
     cards = [];
     for (int i = 0; i < _currentDatasource['data'].length; i++) {
       List<Widget> rows = List<Widget>();
@@ -91,8 +88,8 @@ class ViewState extends State<View> {
         child: InkWell(
           onTap: () {
             Navigator.of(context).pushNamed('viewregister', arguments: {
-              'id': _currentDatasource['data'][i]['id'],
-              'view': viewurl
+              'id': _currentDatasource['data'][i]['id'].toString(),
+              'viewurl': _currentView['url']
             });
           },
           child: Padding(

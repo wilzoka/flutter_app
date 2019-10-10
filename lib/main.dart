@@ -6,7 +6,7 @@ import 'package:flutter_app/ViewRegister.dart';
 
 void main() {
   final logged = Utils.getPreference('token');
-  Utils.setPreference('mainurl', 'https://siprs.plastrela.com.br/');
+  Utils.setPreference('mainurl', 'http://172.10.30.33:8080/');
   runApp(
     MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -23,7 +23,7 @@ void main() {
             return MaterialPageRoute(
                 builder: (_) => ViewRegister(
                       id: args['id'],
-                      viewurl: args['view'],
+                      viewurl: args['viewurl'],
                     ));
           default:
             return MaterialPageRoute(
