@@ -22,7 +22,7 @@ void main() {
             Map args = settings.arguments;
             return MaterialPageRoute(
                 builder: (_) => ViewRegister(
-                      id: args['id'],
+                      id: args['id'], 
                       viewurl: args['viewurl'],
                     ));
           default:

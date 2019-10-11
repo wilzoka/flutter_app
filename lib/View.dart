@@ -62,44 +62,55 @@ class ViewState extends State<View> {
     for (int i = 0; i < _currentDatasource['data'].length; i++) {
       List<Widget> rows = List<Widget>();
       for (int c = 0; c < _currentConf['columns'].length; c++) {
-        rows.add(Row(children: <Widget>[
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                  style: new TextStyle(
-                    color: Colors.black,
+        rows.add(
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      color: Colors.black,
+                    ),
+                    children: <TextSpan>[
+                      TextSpan(
+                          text: _currentConf['columns'][c]['title'].toString() +
+                              ': ',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(
+                          text: adjustData(_currentDatasource['data'][i]
+                              [_currentConf['columns'][c]['data']])),
+                    ],
                   ),
-                  children: <TextSpan>[
-                    TextSpan(
-                        text: _currentConf['columns'][c]['title'].toString() +
-                            ': ',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    TextSpan(
-                        text: adjustData(_currentDatasource['data'][i]
-                            [_currentConf['columns'][c]['data']])),
-                  ]),
-            ),
-          )
-        ]));
+                ),
+              ),
+            ],
+          ),
+        );
       }
-      cards.add(Card(
-        elevation: 2,
-        margin: const EdgeInsets.only(bottom: 10),
-        child: InkWell(
-          onTap: () {
-            Navigator.of(context).pushNamed('viewregister', arguments: {
-              'id': _currentDatasource['data'][i]['id'].toString(),
-              'viewurl': _currentView['url']
-            });
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Column(
-              children: rows,
+      cards.add(
+        Card(
+          elevation: 3,
+          margin: const EdgeInsets.only(bottom: 10),
+          child: InkWell(
+            onTap: () {
+              Navigator.of(context).pushNamed(
+                'viewregister',
+                arguments: {
+                  'title': _currentView['description'].toString(),
+                  'id': _currentDatasource['data'][i]['id'].toString(),
+                  'viewurl': _currentView['url']
+                },
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                children: rows,
+              ),
             ),
           ),
         ),
-      ));
+      );
     }
   }
 
@@ -151,9 +162,7 @@ class ViewState extends State<View> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Add your onPressed code here!
-        },
+        onPressed: () {},
         child: Icon(Icons.add),
         backgroundColor: Colors.green,
       ),

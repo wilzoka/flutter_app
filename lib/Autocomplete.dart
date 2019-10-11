@@ -6,6 +6,21 @@ import 'package:http/http.dart' as http;
 import 'Utils.dart';
 
 class Autocomplete extends StatefulWidget {
+  final String title;
+  final String model;
+  final String attribute;
+  final String query;
+  final String where;
+
+  const Autocomplete(
+      {Key key,
+      this.title,
+      this.model,
+      this.attribute = '',
+      this.query = '',
+      this.where = ''})
+      : super(key: key);
+
   @override
   AutocompleteState createState() => AutocompleteState();
 }
@@ -21,13 +36,27 @@ class AutocompleteState extends State<Autocomplete> {
     filterSearchResults();
   }
 
+  @override
+  void dispose() {
+    searchController.dispose();
+    items = [];
+    super.dispose();
+  }
+
   void filterSearchResults() async {
     items = [];
     final response = await http.get(
         (await Utils.getPreference('mainurl')) +
             'autocomplete?q=' +
             searchController.text +
-            '&model=groupusers&attribute=description&query=&where=',
+            '&model=' +
+            widget.model +
+            '&attribute=' +
+            widget.attribute +
+            '&query=' +
+            widget.query +
+            '&where=' +
+            widget.where,
         headers: {'x-access-token': await Utils.getPreference('token')});
     if (response.statusCode == 200) {
       final j = jsonDecode(response.body);
@@ -40,19 +69,17 @@ class AutocompleteState extends State<Autocomplete> {
 
   @override
   Widget build(BuildContext context) {
-    return new Scaffold(
-      appBar: new AppBar(
-        title: new Text('search'),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
       ),
       body: Container(
         child: Column(
           children: <Widget>[
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: EdgeInsets.all(8.0),
               child: TextField(
-                onChanged: (value) {
-                  filterSearchResults();
-                },
+                onChanged: (value) => filterSearchResults(),
                 controller: searchController,
                 decoration: InputDecoration(
                   hintText: "Pesquisa",
@@ -65,7 +92,7 @@ class AutocompleteState extends State<Autocomplete> {
                 itemCount: items.length,
                 itemBuilder: (context, index) {
                   return ListTile(
-                    title: Text(items[index]['text']),
+                    title: Text(items[index]['text'].toString()),
                     onTap: () {
                       Navigator.pop(context, items[index]);
                     },
