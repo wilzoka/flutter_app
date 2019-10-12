@@ -1,8 +1,4 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'Utils.dart';
 
 class Login extends StatefulWidget {
@@ -11,6 +7,7 @@ class Login extends StatefulWidget {
 }
 
 class LoginState extends State<Login> {
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   final _formKey = GlobalKey<FormState>();
   bool _perfomingLogin = false;
 
@@ -33,6 +30,7 @@ class LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       body: Form(
         key: _formKey,
         child: Padding(
@@ -68,37 +66,30 @@ class LoginState extends State<Login> {
                             setState(() {
                               _perfomingLogin = true;
                             });
-                            final response = await http.post(
-                                await Utils.getPreference('mainurl') + 'login',
-                                body: {
-                                  '_mobile': 'true',
-                                  'username': controllers['username'].text,
-                                  'password': controllers['password'].text
-                                });
-                            try {
-                              if (response.statusCode == 200) {
-                                final json = jsonDecode(response.body);
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                prefs.setString(
-                                    'menu', jsonEncode(json['menu']));
-                                prefs.setString('token', json['token']);
-                                Navigator.pushReplacementNamed(context, 'view');
-                              } else {
-                                Scaffold.of(context).removeCurrentSnackBar();
-                                Scaffold.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text('Acesso não autorizado'),
-                                      backgroundColor: Colors.red),
-                                );
-                              }
-                            } catch (e) {
-                              print(e.toString());
-                            } finally {
-                              setState(() {
-                                _perfomingLogin = false;
-                              });
+                            final j = await Utils.requestPost('login', {
+                              '_mobile': 'true',
+                              'username': controllers['username'].text,
+                              'password': controllers['password'].text
+                            });
+                            if (j['success']) {
+                              Utils.setPreference('token', j['token']);
+                              Navigator.pushReplacementNamed(
+                                context,
+                                'view',
+                                arguments: {'menu': j['menu']},
+                              );
+                            } else {
+                              _scaffoldKey.currentState.removeCurrentSnackBar();
+                              _scaffoldKey.currentState.showSnackBar(
+                                SnackBar(
+                                  content: Text('Acesso não autorizado'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
                             }
+                            setState(() {
+                              _perfomingLogin = false;
+                            });
                           },
                     child: _perfomingLogin
                         ? SizedBox(

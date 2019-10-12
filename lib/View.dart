@@ -1,8 +1,7 @@
-import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_app/Utils.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 class View extends StatefulWidget {
   @override
@@ -28,17 +27,13 @@ class ViewState extends State<View> {
 
   void viewSelect(view) async {
     _currentView = view;
-    final responseConfig = await http.get(
-        (await Utils.getPreference('mainurl')) + 'v/' + view['url'] + '/config',
-        headers: {'x-access-token': await Utils.getPreference('token')});
-    if (responseConfig.statusCode == 200) {
-      _currentConf = jsonDecode(responseConfig.body);
-      final responseDatasource = await http.post(
-          (await Utils.getPreference('mainurl')) + 'datasource',
-          headers: {'x-access-token': await Utils.getPreference('token')},
-          body: {'view': view['url'], 'start': '0', 'length': '10'});
-      if (responseDatasource.statusCode == 200) {
-        _currentDatasource = jsonDecode(responseDatasource.body);
+    _currentConf = await Utils.requestGet('v/' + view['url'] + '/config');
+    if (_currentConf['success']) {
+      _currentDatasource = await Utils.requestPost(
+        'datasource',
+        {'view': view['url'], 'start': '0', 'length': '15'},
+      );
+      if (_currentDatasource['success']) {
         setState(() {
           _buildDatasource();
           title = view['description'];
@@ -63,27 +58,20 @@ class ViewState extends State<View> {
       List<Widget> rows = List<Widget>();
       for (int c = 0; c < _currentConf['columns'].length; c++) {
         rows.add(
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: RichText(
-                  text: TextSpan(
-                    style: TextStyle(
-                      color: Colors.black,
-                    ),
-                    children: <TextSpan>[
-                      TextSpan(
-                          text: _currentConf['columns'][c]['title'].toString() +
-                              ': ',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      TextSpan(
-                          text: adjustData(_currentDatasource['data'][i]
-                              [_currentConf['columns'][c]['data']])),
-                    ],
-                  ),
-                ),
+          RichText(
+            text: TextSpan(
+              style: TextStyle(
+                color: Colors.black,
               ),
-            ],
+              children: <TextSpan>[
+                TextSpan(
+                    text: _currentConf['columns'][c]['title'].toString() + ': ',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                TextSpan(
+                    text: adjustData(_currentDatasource['data'][i]
+                        [_currentConf['columns'][c]['data']])),
+              ],
+            ),
           ),
         );
       }
@@ -104,8 +92,26 @@ class ViewState extends State<View> {
             },
             child: Padding(
               padding: const EdgeInsets.all(10.0),
-              child: Column(
-                children: rows,
+              child: Row(
+                children: <Widget>[
+                  ClipRRect(
+                    borderRadius: new BorderRadius.circular(8.0),
+                    child: Image.network(
+                      'https://picsum.photos/200/300',
+                      height: 150.0,
+                      width: 100.0,
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: rows,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -114,32 +120,34 @@ class ViewState extends State<View> {
     }
   }
 
-  void _loadMenu() async {
-    Widget _getChild(item) {
-      if (item['children'] != null && item['children'].length > 0) {
-        List<Widget> childrens = [];
-        for (int i = 0; i < item['children'].length; i++) {
-          childrens.add(_getChild(item['children'][i]));
-        }
-        return ExpansionTile(
-          title: Text(item['description']),
-          children: childrens,
-        );
-      } else {
-        return ListTile(
-          title: Text(item['description']),
-          onTap: () {
-            viewSelect(item);
-            Navigator.of(context).pop();
-          },
-        );
+  Widget _getChild(item) {
+    if (item['children'] != null && item['children'].length > 0) {
+      List<Widget> childrens = [];
+      for (int i = 0; i < item['children'].length; i++) {
+        childrens.add(_getChild(item['children'][i]));
       }
+      return ExpansionTile(
+        title: Text(item['description']),
+        children: childrens,
+      );
+    } else {
+      return ListTile(
+        title: Text(item['description']),
+        onTap: () {
+          viewSelect(item);
+          Navigator.of(context).pop();
+        },
+      );
     }
+  }
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List menu = jsonDecode(prefs.get('menu'));
-    for (int i = 0; i < menu.length; i++) {
-      _menuItens.add(_getChild(menu[i]));
+  void _loadMenu() async {
+    final j = await Utils.requestGet('config/menu');
+    if (j['success']) {
+      List menu = j['menu'];
+      for (int i = 0; i < menu.length; i++) {
+        _menuItens.add(_getChild(menu[i]));
+      }
     }
   }
 

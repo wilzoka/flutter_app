@@ -1,8 +1,4 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-
 import 'Utils.dart';
 
 class Autocomplete extends StatefulWidget {
@@ -45,21 +41,17 @@ class AutocompleteState extends State<Autocomplete> {
 
   void filterSearchResults() async {
     items = [];
-    final response = await http.get(
-        (await Utils.getPreference('mainurl')) +
-            'autocomplete?q=' +
-            searchController.text +
-            '&model=' +
-            widget.model +
-            '&attribute=' +
-            widget.attribute +
-            '&query=' +
-            widget.query +
-            '&where=' +
-            widget.where,
-        headers: {'x-access-token': await Utils.getPreference('token')});
-    if (response.statusCode == 200) {
-      final j = jsonDecode(response.body);
+    final j = await Utils.requestGet('autocomplete?q=' +
+        searchController.text +
+        '&model=' +
+        widget.model +
+        '&attribute=' +
+        widget.attribute +
+        '&query=' +
+        widget.query +
+        '&where=' +
+        widget.where);
+    if (j['success']) {
       for (int i = 0; i < j['data'].length; i++) {
         items.add(j['data'][i]);
       }
