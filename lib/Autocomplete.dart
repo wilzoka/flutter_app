@@ -41,16 +41,8 @@ class AutocompleteState extends State<Autocomplete> {
 
   void filterSearchResults() async {
     items = [];
-    final j = await Utils.requestGet('autocomplete?q=' +
-        searchController.text +
-        '&model=' +
-        widget.model +
-        '&attribute=' +
-        widget.attribute +
-        '&query=' +
-        widget.query +
-        '&where=' +
-        widget.where);
+    final j = await Utils.requestGet(
+        'autocomplete?q=${searchController.text}&model=${widget.model}&attribute=${widget.attribute}&query=${widget.query}&where=${widget.where}');
     if (j['success']) {
       for (int i = 0; i < j['data'].length; i++) {
         items.add(j['data'][i]);
@@ -83,11 +75,13 @@ class AutocompleteState extends State<Autocomplete> {
               child: ListView.builder(
                 itemCount: items.length,
                 itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(items[index]['text'].toString()),
-                    onTap: () {
-                      Navigator.pop(context, items[index]);
-                    },
+                  return Card(
+                    child: ListTile(
+                      title: Text(items[index]['text'].toString()),
+                      onTap: () {
+                        Navigator.pop(context, items[index]);
+                      },
+                    ),
                   );
                 },
               ),

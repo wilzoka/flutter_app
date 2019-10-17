@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_app/Utils.dart';
 import 'package:flutter_app/ViewTable.dart';
+import 'package:http/http.dart' as http;
 import 'Autocomplete.dart';
 
 class ViewRegister extends StatefulWidget {
@@ -35,9 +38,16 @@ class ViewRegisterState extends State<ViewRegister> {
   }
 
   void _getConf() async {
-    _currentConf = await Utils.requestGet(
-        'v/' + widget.viewurl + '/' + widget.id + '/config');
-    if (_currentConf['success']) {
+    final response = await http.get(
+        (await Utils.getPreference('mainurl')) +
+            'v/' +
+            widget.viewurl +
+            '/' +
+            widget.id +
+            '/config',
+        headers: {'x-access-token': await Utils.getPreference('token')});
+    if (response.statusCode == 200) {
+      _currentConf = jsonDecode(response.body);
       setState(() {
         title = _currentConf['view']['name'];
         _buildView();
@@ -263,11 +273,9 @@ class ViewRegisterState extends State<ViewRegister> {
         appBar: AppBar(
           title: Text(title),
           actions: <Widget>[
-            FlatButton(
-              textColor: Colors.white,
-              onPressed: () {},
-              child: Text("Salvar"),
-              shape: CircleBorder(side: BorderSide(color: Colors.transparent)),
+            ListTile(
+              title: Text('Salvar'),
+              onTap: () {},
             )
           ],
         ),
@@ -279,6 +287,11 @@ class ViewRegisterState extends State<ViewRegister> {
               children: tabfields[_currentConf['zone'][0]],
             ),
           ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {},
+          child: Icon(Icons.check),
+          backgroundColor: Colors.green,
         ),
       );
     } else {
@@ -306,6 +319,59 @@ class ViewRegisterState extends State<ViewRegister> {
             key: _formKey,
             child: TabBarView(children: tabscontainer),
           ),
+          floatingActionButton: saving
+              ? FloatingActionButton(
+                  child: CircularProgressIndicator(),
+                  backgroundColor: Colors.white,
+                  onPressed: () {},
+                )
+              : FloatingActionButton(
+                  child: Icon(Icons.check),
+                  backgroundColor: Colors.green,
+                  onPressed: () async {
+                    Map register = {};
+                    _currentConf['fields'].forEach((key, value) {
+                      if (fieldcontroller.containsKey(key)) {
+                        switch (value['type']) {
+                          case 'boolean':
+                            if (fieldcontroller[key].text == 'Sim') {
+                              register[key] = 'true';
+                            } else {
+                              register[key] = 'false';
+                            }
+                            break;
+                          default:
+                            // fieldcontroller[key].build
+                            register[key] = fieldcontroller[key].text;
+                            break;
+                        }
+                      }
+                    });
+
+                    lastSaveRequest['invalidfields'] = [];
+                    _formKey.currentState.validate();
+                    setState(() {
+                      saving = true;
+                    });
+                    lastSaveRequest = await Utils.requestPost(
+                        'v/' + widget.viewurl + '/' + widget.id, register);
+                    if (lastSaveRequest['success']) {
+                      Navigator.pop(context, lastSaveRequest);
+                    } else {
+                      _scaffoldKey.currentState.removeCurrentSnackBar();
+                      _scaffoldKey.currentState.showSnackBar(
+                        SnackBar(
+                          content: Text(lastSaveRequest['msg']),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      _formKey.currentState.validate();
+                    }
+                    setState(() {
+                      saving = false;
+                    });
+                  },
+                ),
         ),
       );
     }

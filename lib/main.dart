@@ -5,7 +5,7 @@ import 'package:flutter_app/View.dart';
 import 'package:flutter_app/ViewRegister.dart';
 
 void main() async {
-  Utils.setPreference('mainurl', 'http://192.168.0.103:8080/');
+  print('mains');
   runApp(
     MaterialApp(
       debugShowCheckedModeBanner: false,
