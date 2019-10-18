@@ -161,14 +161,12 @@ class ViewTableState extends State<ViewTable> {
                             selectedIds.length > 0 ? Colors.blue : Colors.black,
                       ),
                       itemBuilder: (BuildContext context) {
-                        print('rebuild');
                         List<PopupMenuEntry> items = [];
                         // Delete
                         items.add(PopupMenuItem(
                           enabled: selectedIds.length > 0,
                           value: {'type': 'action', 'value': 'delete'},
                           child: ListTile(
-                            contentPadding: EdgeInsets.all(0),
                             title: Text('Excluir'),
                             leading: Icon(
                               Icons.delete,
@@ -181,7 +179,6 @@ class ViewTableState extends State<ViewTable> {
                           enabled: selectedIds.length > 0,
                           value: {'type': 'action', 'value': 'unmark'},
                           child: ListTile(
-                            contentPadding: EdgeInsets.all(0),
                             title: Text('Desmarcar Todos'),
                             leading: Icon(
                               Icons.close,
@@ -198,11 +195,11 @@ class ViewTableState extends State<ViewTable> {
                               'type': 'event',
                               'value': conf['events'][i]['id']
                             },
-                            child: ListTile(
-                              contentPadding: EdgeInsets.all(0),
-                              title: Text(conf['events'][i]['description']),
-                              leading: Icon(Icons.chevron_right),
-                            ),
+                            child: Text(conf['events'][i]['description']),
+                            // child: ListTile(
+                            //   title: Text(conf['events'][i]['description']),
+                            //   leading: Icon(Icons.chevron_right),
+                            // ),
                           ));
                         }
                         return items;
