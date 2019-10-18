@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/ViewRegister.dart';
-import 'Utils.dart';
+import 'package:flutter_app/Utils.dart';
 
 class ViewTable extends StatefulWidget {
   final String url;
   ViewTable({Key key, this.url}) : super(key: key);
-
   @override
   ViewTableState createState() => ViewTableState();
 }
@@ -15,13 +14,15 @@ class ViewTableState extends State<ViewTable> {
   Map<String, dynamic> conf = {};
   List data = [];
   int dsIndex = 0;
-  int dsLength = 20;
+  int dsLength = 50;
   bool fullfetched = false;
+  bool fetching = false;
+  bool deleting = false;
   bool selectMode = false;
   List<int> selectedIds = [];
 
-  void fetchData() async {
-    final j = await Utils.requestPost(
+  Future<Map> getData() async {
+    return await Utils.requestPost(
       'datasource',
       {
         'view': widget.url,
@@ -29,19 +30,66 @@ class ViewTableState extends State<ViewTable> {
         'length': dsLength.toString()
       },
     );
-    if (j['success']) {
-      if (j['data'].length < dsLength) {
-        fullfetched = true;
+  }
+
+  Future<void> fetchData() async {
+    if (!fetching) {
+      if (mounted)
+        setState(() {
+          fetching = true;
+        });
+      final j = await getData();
+      if (j['success']) {
+        if (j['data'].length < dsLength) {
+          fullfetched = true;
+        }
+        dsIndex += dsLength;
+        if (mounted)
+          setState(() {
+            data.addAll(j['data']);
+          });
       }
-      dsIndex += dsLength;
-      setState(() {
-        data.addAll(j['data']);
-      });
+      if (mounted)
+        setState(() {
+          fetching = false;
+        });
     }
   }
 
-  void getConf() async {
+  Future<void> resetUI(bool scrolltop, bool fromRefreshIndicator) async {
+    if (mounted && !fromRefreshIndicator)
+      setState(() {
+        fetching = true;
+      });
+    final lastIndex = dsIndex;
+    final lastLength = dsLength;
+    if (!scrolltop) dsLength = dsIndex + dsLength;
     dsIndex = 0;
+    selectMode = false;
+    selectedIds = [];
+    final j = await getData();
+    if (j['success']) {
+      if (mounted)
+        setState(() {
+          data = j['data'];
+        });
+      if (scrolltop) {
+        scrollController.animateTo(
+          0.0,
+          curve: Curves.easeOut,
+          duration: const Duration(milliseconds: 300),
+        );
+      }
+    }
+    dsIndex = lastIndex;
+    dsLength = lastLength;
+    if (mounted && !fromRefreshIndicator)
+      setState(() {
+        fetching = false;
+      });
+  }
+
+  Future<void> initAsync() async {
     conf = await Utils.requestGet('v/${widget.url}/config');
     if (conf['success']) {
       fetchData();
@@ -70,9 +118,10 @@ class ViewTableState extends State<ViewTable> {
         context,
         MaterialPageRoute(
           builder: (context) => ViewRegister(
-              key: ValueKey(widget.url),
-              id: id.toString(),
-              viewurl: widget.url),
+            key: ValueKey(widget.url),
+            id: id.toString(),
+            viewurl: widget.url,
+          ),
         ),
       );
     }
@@ -94,6 +143,54 @@ class ViewTableState extends State<ViewTable> {
           selectedIds = [];
           selectMode = false;
         });
+      } else if (option['value'] == 'delete') {
+        showDialog(
+          context: context,
+          barrierDismissible: false, // user must tap button for close dialog!
+          builder: (BuildContext dcontext) {
+            return AlertDialog(
+              title: Text('Atenção'),
+              content: Text(
+                  'Os registros selecionados serão Excluídos. Prosseguir?'),
+              actions: <Widget>[
+                FlatButton(
+                  child: Text('Cancelar'),
+                  onPressed: () {
+                    Navigator.of(dcontext).pop();
+                  },
+                ),
+                FlatButton(
+                  color: Colors.red,
+                  child: Text('Excluir', style: TextStyle(color: Colors.white)),
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    if (mounted)
+                      setState(() {
+                        deleting = true;
+                      });
+                    final j =
+                        await Utils.requestPost('v/${widget.url}/delete', {
+                      'ids': selectedIds.join(','),
+                    });
+                    if (j['success']) {
+                      Utils.showSnackBar(context, j['msg'], Colors.green);
+                      resetUI(false, false);
+                    } else {
+                      Utils.showSnackBar(
+                          context,
+                          j.containsKey('msg') ? j['msg'] : 'Algo deu errado',
+                          Colors.red);
+                    }
+                    if (mounted)
+                      setState(() {
+                        deleting = false;
+                      });
+                  },
+                )
+              ],
+            );
+          },
+        );
       }
     }
   }
@@ -101,14 +198,14 @@ class ViewTableState extends State<ViewTable> {
   @override
   void initState() {
     super.initState();
+    initAsync();
     scrollController.addListener(() {
-      if (scrollController.position.pixels ==
-              scrollController.position.maxScrollExtent &&
-          !fullfetched) {
+      final dif = scrollController.position.pixels /
+          scrollController.position.maxScrollExtent;
+      if (dif >= 0.90 && !fullfetched) {
         fetchData();
       }
     });
-    getConf();
   }
 
   @override
@@ -237,79 +334,100 @@ class ViewTableState extends State<ViewTable> {
               ],
             ),
           ),
-          Expanded(
-            child: ListView.builder(
-              controller: scrollController,
-              itemCount: data.length,
-              itemBuilder: (context, i) {
-                List<TableRow> rows = [];
-                for (int c = 0; c < conf['columns'].length; c++) {
-                  rows.add(
-                    TableRow(
-                      children: [
-                        Text(
-                          '${conf['columns'][c]['title']}: ',
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 2),
-                          child: Text(
-                            Utils.adjustData(
-                                data[i][conf['columns'][c]['data']]),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                return Stack(
-                  children: [
-                    Card(
-                      color: cardColor(data[i]['id']),
-                      child: InkWell(
-                        onLongPress: () => cardLongPress(data[i]['id']),
-                        onTap: () => cardTap(data[i]['id']),
-                        child: Padding(
-                          padding: const EdgeInsets.all(9.0),
-                          child: Table(
-                            border: TableBorder(
-                              horizontalInside: BorderSide(
-                                color: Colors.grey[200],
-                                width: 0.5,
-                              ),
-                            ),
-                            columnWidths: {0: IntrinsicColumnWidth()},
-                            defaultVerticalAlignment:
-                                TableCellVerticalAlignment.middle,
-                            children: rows,
-                          ),
+          fullfetched && data.length == 0
+              ? Container(
+                  child: Center(child: Text('Nenhum Registro Encontrado')),
+                )
+              : Expanded(
+                  child: Stack(
+                    children: <Widget>[
+                      RefreshIndicator(
+                        onRefresh: () async => resetUI(true, true),
+                        child: ListView.builder(
+                          controller: scrollController,
+                          itemCount: data.length,
+                          itemBuilder: (context, i) {
+                            List<TableRow> rows = [];
+                            for (int c = 0; c < conf['columns'].length; c++) {
+                              rows.add(
+                                TableRow(
+                                  children: [
+                                    Text(
+                                      '${conf['columns'][c]['title']}: ',
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsets.only(left: 2),
+                                      child: Text(
+                                        Utils.adjustData(data[i]
+                                            [conf['columns'][c]['data']]),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                            return Stack(
+                              children: [
+                                Card(
+                                  color: cardColor(data[i]['id']),
+                                  child: InkWell(
+                                    onLongPress: () =>
+                                        cardLongPress(data[i]['id']),
+                                    onTap: () => cardTap(data[i]['id']),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(9.0),
+                                      child: Table(
+                                        border: TableBorder(
+                                          horizontalInside: BorderSide(
+                                            color: Colors.grey[200],
+                                            width: 0.5,
+                                          ),
+                                        ),
+                                        columnWidths: {
+                                          0: IntrinsicColumnWidth()
+                                        },
+                                        defaultVerticalAlignment:
+                                            TableCellVerticalAlignment.middle,
+                                        children: rows,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                selectMode
+                                    ? Align(
+                                        alignment: Alignment.topRight,
+                                        child: Padding(
+                                          padding: EdgeInsets.all(8.0),
+                                          child: Icon(
+                                            selectedIds.indexOf(
+                                                        data[i]['id']) >=
+                                                    0
+                                                ? Icons.check_box
+                                                : Icons.check_box_outline_blank,
+                                            color: selectedIds.indexOf(
+                                                        data[i]['id']) >=
+                                                    0
+                                                ? Colors.blue
+                                                : Colors.grey,
+                                          ),
+                                        ),
+                                      )
+                                    : Container(),
+                              ],
+                            );
+                          },
                         ),
                       ),
-                    ),
-                    selectMode
-                        ? Align(
-                            alignment: Alignment.topRight,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Icon(
-                                selectedIds.indexOf(data[i]['id']) >= 0
-                                    ? Icons.check_box
-                                    : Icons.check_box_outline_blank,
-                                color: selectedIds.indexOf(data[i]['id']) >= 0
-                                    ? Colors.blue
-                                    : Colors.grey,
-                              ),
-                            ),
-                          )
-                        : Container(),
-                  ],
-                );
-              },
-            ),
-          ),
+                      fetching || deleting
+                          ? Center(child: CircularProgressIndicator())
+                          : Container()
+                    ],
+                  ),
+                )
         ],
       ),
     );

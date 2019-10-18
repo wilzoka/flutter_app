@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Utils {
-  static String mainurl = 'http://172.10.30.33:8080';
+  static const String mainurl = 'https://siprs.plastrela.com.br';
 
   static nonEmptyValidator(String value) {
     return value.isEmpty ? 'Campo Obrigatório' : null;
@@ -98,5 +98,15 @@ class Utils {
     } else {
       return value.toString();
     }
+  }
+
+  static void showSnackBar(context, String text, Color color) {
+    Scaffold.of(context).removeCurrentSnackBar();
+    Scaffold.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        backgroundColor: color,
+      ),
+    );
   }
 }
