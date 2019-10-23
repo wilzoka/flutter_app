@@ -50,11 +50,6 @@ class ViewState extends State<View> {
               url: currentview['url'],
             )
           : Container(),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: () {},
-      //   child: Icon(Icons.add),
-      //   backgroundColor: Colors.green,
-      // ),
       drawer: Drawer(
         child: ListView(
           children: menu,

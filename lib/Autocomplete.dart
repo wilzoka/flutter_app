@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'Utils.dart';
 
@@ -23,32 +25,39 @@ class Autocomplete extends StatefulWidget {
 
 class AutocompleteState extends State<Autocomplete> {
   TextEditingController searchController = TextEditingController();
+  Timer timer;
+  bool loading = false;
 
   List items = [];
 
   @override
   void initState() {
     super.initState();
-    filterSearchResults();
+    fetchResults();
   }
 
   @override
   void dispose() {
     searchController.dispose();
     items = [];
+    if (timer != null) timer.cancel();
     super.dispose();
   }
 
-  void filterSearchResults() async {
-    items = [];
+  void fetchResults() async {
+    if (mounted)
+      setState(() {
+        loading = true;
+      });
     final j = await Utils.requestGet(
         'autocomplete?q=${searchController.text}&model=${widget.model}&attribute=${widget.attribute}&query=${widget.query}&where=${widget.where}');
     if (j['success']) {
-      for (int i = 0; i < j['data'].length; i++) {
-        items.add(j['data'][i]);
-      }
+      items = j['data'];
     }
-    setState(() {});
+    if (mounted)
+      setState(() {
+        loading = false;
+      });
   }
 
   @override
@@ -61,29 +70,54 @@ class AutocompleteState extends State<Autocomplete> {
         child: Column(
           children: <Widget>[
             Padding(
-              padding: EdgeInsets.all(8.0),
-              child: TextField(
-                onChanged: (value) => filterSearchResults(),
-                controller: searchController,
-                decoration: InputDecoration(
-                  hintText: "Pesquisa",
-                  prefixIcon: Icon(Icons.search),
+              padding: const EdgeInsets.all(4.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(
+                    color: Colors.grey[400],
+                  ),
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(8.0),
+                  ),
+                ),
+                child: TextField(
+                  onChanged: (value) {
+                    if (timer != null) timer.cancel();
+                    timer = Timer(Duration(milliseconds: 750), () {
+                      fetchResults();
+                    });
+                  },
+                  controller: searchController,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: "Pesquisa",
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.only(top: 15)),
                 ),
               ),
             ),
             Expanded(
-              child: ListView.builder(
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                    child: ListTile(
-                      title: Text(items[index]['text'].toString()),
-                      onTap: () {
-                        Navigator.pop(context, items[index]);
-                      },
-                    ),
-                  );
-                },
+              child: Stack(
+                children: [
+                  ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      return Card(
+                        child: ListTile(
+                          title: Text(items[index]['text'].toString()),
+                          onTap: () {
+                            Navigator.pop(context, items[index]);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                  loading
+                      ? Center(child: CircularProgressIndicator())
+                      : Container()
+                ],
               ),
             ),
           ],

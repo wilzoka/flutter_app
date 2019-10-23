@@ -1,42 +1,50 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_app/ViewRegister.dart';
 import 'package:flutter_app/Utils.dart';
 
 class ViewTable extends StatefulWidget {
   final String url;
-  ViewTable({Key key, this.url}) : super(key: key);
+  final String parent;
+  ViewTable({Key key, this.url, this.parent}) : super(key: key);
   @override
   ViewTableState createState() => ViewTableState();
 }
 
 class ViewTableState extends State<ViewTable> {
   ScrollController scrollController = ScrollController();
+  TextEditingController fastsearchController = TextEditingController();
   Map<String, dynamic> conf = {};
   List data = [];
   int dsIndex = 0;
   int dsLength = 50;
   bool fullfetched = false;
-  bool fetching = false;
+  bool loading = false;
   bool deleting = false;
   bool selectMode = false;
   List<int> selectedIds = [];
+  Timer timer;
 
   Future<Map> getData() async {
-    return await Utils.requestPost(
-      'datasource',
-      {
-        'view': widget.url,
-        'start': dsIndex.toString(),
-        'length': dsLength.toString()
-      },
-    );
+    Map body = {
+      'view': widget.url,
+      'start': dsIndex.toString(),
+      'length': dsLength.toString(),
+      '_filterfs': fastsearchController.text
+    };
+    if (widget.parent != null) {
+      body['issubview'] = 'true';
+      body['id'] = widget.parent;
+    }
+    return await Utils.requestPost('datasource', body);
   }
 
   Future<void> fetchData() async {
-    if (!fetching) {
+    if (!loading) {
       if (mounted)
         setState(() {
-          fetching = true;
+          loading = true;
         });
       final j = await getData();
       if (j['success']) {
@@ -51,7 +59,7 @@ class ViewTableState extends State<ViewTable> {
       }
       if (mounted)
         setState(() {
-          fetching = false;
+          loading = false;
         });
     }
   }
@@ -59,14 +67,12 @@ class ViewTableState extends State<ViewTable> {
   Future<void> resetUI(bool scrolltop, bool fromRefreshIndicator) async {
     if (mounted && !fromRefreshIndicator)
       setState(() {
-        fetching = true;
+        loading = true;
       });
     final lastIndex = dsIndex;
     final lastLength = dsLength;
     if (!scrolltop) dsLength = dsIndex + dsLength;
     dsIndex = 0;
-    selectMode = false;
-    selectedIds = [];
     final j = await getData();
     if (j['success']) {
       if (mounted)
@@ -85,12 +91,22 @@ class ViewTableState extends State<ViewTable> {
     dsLength = lastLength;
     if (mounted && !fromRefreshIndicator)
       setState(() {
-        fetching = false;
+        loading = false;
       });
   }
 
   Future<void> initAsync() async {
+    if (mounted) {
+      setState(() {
+        loading = true;
+      });
+    }
     conf = await Utils.requestGet('v/${widget.url}/config');
+    if (mounted) {
+      setState(() {
+        loading = false;
+      });
+    }
     if (conf['success']) {
       fetchData();
     }
@@ -100,7 +116,7 @@ class ViewTableState extends State<ViewTable> {
     return selectedIds.indexOf(id) >= 0 ? Colors.grey[300] : Colors.white;
   }
 
-  void cardTap(int id) {
+  void cardTap(int id) async {
     if (selectMode) {
       setState(() {
         final idx = selectedIds.indexOf(id);
@@ -114,7 +130,8 @@ class ViewTableState extends State<ViewTable> {
         }
       });
     } else {
-      Navigator.push(
+      Utils.hideSnackBar(context);
+      final Map lsr = await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ViewRegister(
@@ -124,6 +141,11 @@ class ViewTableState extends State<ViewTable> {
           ),
         ),
       );
+      if (lsr != null && lsr['success']) {
+        if (lsr.containsKey('msg'))
+          Utils.showSnackBar(context, lsr['msg'], Colors.green);
+        resetUI(false, false);
+      }
     }
   }
 
@@ -146,7 +168,7 @@ class ViewTableState extends State<ViewTable> {
       } else if (option['value'] == 'delete') {
         showDialog(
           context: context,
-          barrierDismissible: false, // user must tap button for close dialog!
+          barrierDismissible: false,
           builder: (BuildContext dcontext) {
             return AlertDialog(
               title: Text('Atenção'),
@@ -173,6 +195,8 @@ class ViewTableState extends State<ViewTable> {
                       'ids': selectedIds.join(','),
                     });
                     if (j['success']) {
+                      selectMode = false;
+                      selectedIds = [];
                       Utils.showSnackBar(context, j['msg'], Colors.green);
                       resetUI(false, false);
                     } else {
@@ -210,7 +234,12 @@ class ViewTableState extends State<ViewTable> {
 
   @override
   void dispose() {
+    conf = {};
+    data = [];
+    selectedIds = [];
+    fastsearchController.dispose();
     scrollController.dispose();
+    if (timer != null) timer.cancel();
     super.dispose();
   }
 
@@ -220,118 +249,142 @@ class ViewTableState extends State<ViewTable> {
       child: Column(
         children: <Widget>[
           Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                IconButton(
-                  // iconSize: 20.2,
-                  icon: Icon(Icons.add_box),
-                  color: Colors.green,
-                  iconSize: 30,
-                  onPressed: () {},
+            padding: EdgeInsets.all(4.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(
+                  color: Colors.grey[400],
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 5),
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Pesquisar',
+                borderRadius: BorderRadius.all(
+                  Radius.circular(8.0),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  IconButton(
+                    // iconSize: 20.2,
+                    icon: Icon(Icons.add_box),
+                    color: Colors.green,
+                    iconSize: 30,
+                    onPressed: () => cardTap(0),
+                    splashColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(left: 5),
+                      child: TextField(
+                        onChanged: (value) {
+                          if (timer != null) timer.cancel();
+                          timer = Timer(Duration(milliseconds: 750), () {
+                            resetUI(true, false);
+                          });
+                        },
+                        readOnly: conf.containsKey('fastsearch') &&
+                            conf['fastsearch'].isEmpty,
+                        controller: fastsearchController,
+                        decoration: InputDecoration(
+                          hintText: conf['fastsearch'],
+                          border: InputBorder.none,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                IconButton(
-                  // iconSize: 20.2,
-                  icon: Icon(Icons.filter_list),
-                  iconSize: 30,
-                  onPressed: () {},
-                ),
-                Stack(
-                  children: [
-                    PopupMenuButton(
-                      onSelected: (value) => eventSelect(value),
-                      icon: Icon(
-                        Icons.more_vert,
-                        color:
-                            selectedIds.length > 0 ? Colors.blue : Colors.black,
-                      ),
-                      itemBuilder: (BuildContext context) {
-                        List<PopupMenuEntry> items = [];
-                        // Delete
-                        items.add(PopupMenuItem(
-                          enabled: selectedIds.length > 0,
-                          value: {'type': 'action', 'value': 'delete'},
-                          child: ListTile(
-                            title: Text('Excluir'),
-                            leading: Icon(
-                              Icons.delete,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ));
-                        // Desmarcar Selecionados
-                        items.add(PopupMenuItem(
-                          enabled: selectedIds.length > 0,
-                          value: {'type': 'action', 'value': 'unmark'},
-                          child: ListTile(
-                            title: Text('Desmarcar Todos'),
-                            leading: Icon(
-                              Icons.close,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ));
-                        if (conf['events'].length > 0) {
-                          items.add(PopupMenuDivider(height: 10));
-                        }
-                        for (var i = 0; i < conf['events'].length; i++) {
+                  IconButton(
+                    // iconSize: 20.2,
+                    icon: Icon(Icons.filter_list),
+                    iconSize: 30,
+                    onPressed: () {},
+                  ),
+                  Stack(
+                    children: [
+                      PopupMenuButton(
+                        onSelected: (value) => eventSelect(value),
+                        icon: Icon(
+                          Icons.more_vert,
+                          color: selectedIds.length > 0
+                              ? Colors.blue
+                              : Colors.black,
+                        ),
+                        itemBuilder: (BuildContext context) {
+                          List<PopupMenuEntry> items = [];
+                          // Delete
                           items.add(PopupMenuItem(
-                            value: {
-                              'type': 'event',
-                              'value': conf['events'][i]['id']
-                            },
-                            child: Text(conf['events'][i]['description']),
-                            // child: ListTile(
-                            //   title: Text(conf['events'][i]['description']),
-                            //   leading: Icon(Icons.chevron_right),
-                            // ),
-                          ));
-                        }
-                        return items;
-                      },
-                    ),
-                    selectedIds.length > 0
-                        ? Positioned(
-                            top: 0,
-                            right: 0,
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 1,
+                            enabled: selectedIds.length > 0,
+                            value: {'type': 'action', 'value': 'delete'},
+                            child: ListTile(
+                              title: Text('Excluir'),
+                              leading: Icon(
+                                Icons.delete,
+                                color: Colors.red,
                               ),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(10.0),
-                                ),
+                            ),
+                          ));
+                          // Desmarcar Selecionados
+                          items.add(PopupMenuItem(
+                            enabled: selectedIds.length > 0,
+                            value: {'type': 'action', 'value': 'unmark'},
+                            child: ListTile(
+                              title: Text('Desmarcar Todos'),
+                              leading: Icon(
+                                Icons.close,
                                 color: Colors.blue,
                               ),
-                              child: Text(
-                                selectedIds.length.toString(),
-                                // 100.toString(),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                            ),
+                          ));
+                          if (conf['events'].length > 0) {
+                            items.add(PopupMenuDivider(height: 10));
+                          }
+                          for (var i = 0; i < conf['events'].length; i++) {
+                            items.add(PopupMenuItem(
+                              value: {
+                                'type': 'event',
+                                'value': conf['events'][i]['id']
+                              },
+                              child: Text(conf['events'][i]['description']),
+                              // child: ListTile(
+                              //   title: Text(conf['events'][i]['description']),
+                              //   leading: Icon(Icons.chevron_right),
+                              // ),
+                            ));
+                          }
+                          return items;
+                        },
+                      ),
+                      selectedIds.length > 0
+                          ? Positioned(
+                              top: 1,
+                              right: 1,
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 0,
+                                ),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(10.0),
+                                  ),
+                                  color: Colors.blue,
+                                ),
+                                child: Text(
+                                  selectedIds.length.toString(),
+                                  // 100.toString(),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
-                            ),
-                          )
-                        : Container(),
-                  ],
-                )
-              ],
+                            )
+                          : Container(),
+                    ],
+                  )
+                ],
+              ),
             ),
           ),
           fullfetched && data.length == 0
@@ -422,7 +475,7 @@ class ViewTableState extends State<ViewTable> {
                           },
                         ),
                       ),
-                      fetching || deleting
+                      loading || deleting
                           ? Center(child: CircularProgressIndicator())
                           : Container()
                     ],

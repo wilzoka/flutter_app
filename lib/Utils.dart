@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Utils {
-  static const String mainurl = 'https://siprs.plastrela.com.br';
+  static const String mainurl = 'http://172.10.30.33:8080';
 
   static nonEmptyValidator(String value) {
     return value.isEmpty ? 'Campo Obrigatório' : null;
@@ -24,13 +24,48 @@ class Utils {
     (await SharedPreferences.getInstance()).remove(key);
   }
 
-  static Future selectDate(BuildContext context, fn) async {
+  static DateTime parseDate(String value) {
+    if (value.contains(':')) {
+      final splitted = value.split(' ');
+      final date = splitted[0].split('/');
+      final time = splitted[1].split(':');
+      return DateTime.utc(int.parse(date[2]), int.parse(date[1]),
+          int.parse(date[0]), int.parse(time[0]), int.parse(time[1]));
+    } else {
+      final splitted = value.split('/');
+      return DateTime.utc(int.parse(splitted[2]), int.parse(splitted[1]),
+          int.parse(splitted[0]));
+    }
+  }
+
+  static String parseDecimal(String value) {
+    print('parse $value');
+    final formatter = new NumberFormat("####.00", 'pt');
+    print(formatter.format(double.parse(value)));
+    return formatter.format(double.parse(value));
+  }
+
+  static Future selectDate(BuildContext context, String value) async {
     final DateTime picked = await showDatePicker(
         context: context,
-        initialDate: DateTime.now(),
+        initialDate: value == null || value.isEmpty
+            ? DateTime.now()
+            : Utils.parseDate(value),
         firstDate: DateTime(1900),
         lastDate: DateTime(2100));
-    fn(picked == null ? null : DateFormat('dd/MM/yyyy').format(picked));
+    return picked == null ? null : DateFormat('dd/MM/yyyy').format(picked);
+  }
+
+  static Future selectTime(BuildContext context, String value) async {
+    final TimeOfDay picked = await showTimePicker(
+      context: context,
+      initialTime: value == null || value.isEmpty
+          ? TimeOfDay.now()
+          : TimeOfDay.fromDateTime(Utils.parseDate(value)),
+    );
+    return picked == null
+        ? null
+        : '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
   }
 
   static Future<Map> requestGet(String url) async {
@@ -100,9 +135,28 @@ class Utils {
     }
   }
 
-  static void showSnackBar(context, String text, Color color) {
+  static void hideSnackBar(BuildContext context) {
     Scaffold.of(context).removeCurrentSnackBar();
+  }
+
+  static void showSnackBar(BuildContext context, String text, Color color) {
+    Utils.hideSnackBar(context);
     Scaffold.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        backgroundColor: color,
+      ),
+    );
+  }
+
+  static void hideSnackBarByKey(GlobalKey<ScaffoldState> key) {
+    key.currentState.removeCurrentSnackBar();
+  }
+
+  static void showSnackBarByKey(
+      GlobalKey<ScaffoldState> key, String text, Color color) {
+    Utils.hideSnackBarByKey(key);
+    key.currentState.showSnackBar(
       SnackBar(
         content: Text(text),
         backgroundColor: color,
