@@ -64,8 +64,8 @@ class ViewTableState extends State<ViewTable> {
     }
   }
 
-  Future<void> resetUI(bool scrolltop, bool fromRefreshIndicator) async {
-    if (mounted && !fromRefreshIndicator)
+  Future<void> resetUI(bool scrolltop) async {
+    if (mounted)
       setState(() {
         loading = true;
       });
@@ -89,7 +89,7 @@ class ViewTableState extends State<ViewTable> {
     }
     dsIndex = lastIndex;
     dsLength = lastLength;
-    if (mounted && !fromRefreshIndicator)
+    if (mounted)
       setState(() {
         loading = false;
       });
@@ -138,13 +138,14 @@ class ViewTableState extends State<ViewTable> {
             key: ValueKey(widget.url),
             id: id.toString(),
             viewurl: widget.url,
+            parent: widget.parent,
           ),
         ),
       );
       if (lsr != null && lsr['success']) {
         if (lsr.containsKey('msg'))
           Utils.showSnackBar(context, lsr['msg'], Colors.green);
-        resetUI(false, false);
+        resetUI(false);
       }
     }
   }
@@ -158,7 +159,7 @@ class ViewTableState extends State<ViewTable> {
     });
   }
 
-  void eventSelect(option) {
+  void eventSelect(option) async {
     if (option['type'] == 'action') {
       if (option['value'] == 'unmark') {
         setState(() {
@@ -182,6 +183,8 @@ class ViewTableState extends State<ViewTable> {
                   },
                 ),
                 FlatButton(
+                  splashColor: Colors.transparent,
+                  highlightColor: Colors.redAccent,
                   color: Colors.red,
                   child: Text('Excluir', style: TextStyle(color: Colors.white)),
                   onPressed: () async {
@@ -198,7 +201,7 @@ class ViewTableState extends State<ViewTable> {
                       selectMode = false;
                       selectedIds = [];
                       Utils.showSnackBar(context, j['msg'], Colors.green);
-                      resetUI(false, false);
+                      resetUI(false);
                     } else {
                       Utils.showSnackBar(
                           context,
@@ -215,6 +218,24 @@ class ViewTableState extends State<ViewTable> {
             );
           },
         );
+      }
+    } else if (option['type'] == 'event') {
+      final j = await Utils.requestGet(
+          'event/${option['value']}?id=${widget.parent}&ids=${selectedIds.join(',')}');
+      if (j['success']) {
+        if (mounted)
+          setState(() {
+            selectedIds = [];
+            selectMode = false;
+          });
+        if (j.containsKey('msg')) {
+          Utils.showSnackBar(context, j['msg'] ?? '', Colors.green);
+        }
+        if (j.containsKey('reloadtables') && j['reloadtables']) {
+          resetUI(false);
+        }
+      } else {
+        Utils.showSnackBar(context, j['msg'] ?? 'Algo deu errado', Colors.red);
       }
     }
   }
@@ -280,7 +301,7 @@ class ViewTableState extends State<ViewTable> {
                         onChanged: (value) {
                           if (timer != null) timer.cancel();
                           timer = Timer(Duration(milliseconds: 750), () {
-                            resetUI(true, false);
+                            resetUI(true);
                           });
                         },
                         readOnly: conf.containsKey('fastsearch') &&
@@ -394,86 +415,96 @@ class ViewTableState extends State<ViewTable> {
               : Expanded(
                   child: Stack(
                     children: <Widget>[
-                      RefreshIndicator(
-                        onRefresh: () async => resetUI(true, true),
-                        child: ListView.builder(
-                          controller: scrollController,
-                          itemCount: data.length,
-                          itemBuilder: (context, i) {
-                            List<TableRow> rows = [];
-                            for (int c = 0; c < conf['columns'].length; c++) {
-                              rows.add(
-                                TableRow(
-                                  children: [
-                                    Text(
-                                      '${conf['columns'][c]['title']}: ',
-                                      textAlign: TextAlign.right,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                      ListView.builder(
+                        controller: scrollController,
+                        itemCount: data.length,
+                        itemBuilder: (context, i) {
+                          List<TableRow> rows = [];
+                          for (int c = 0; c < conf['columns'].length; c++) {
+                            rows.add(
+                              TableRow(
+                                children: [
+                                  Text(
+                                    '${conf['columns'][c]['title']}: ',
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    Padding(
-                                      padding: EdgeInsets.only(left: 2),
-                                      child: Text(
-                                        Utils.adjustData(data[i]
-                                            [conf['columns'][c]['data']]),
-                                      ),
+                                  ),
+                                  Padding(
+                                    padding: EdgeInsets.only(left: 2),
+                                    child: Text(
+                                      Utils.adjustData(
+                                          data[i][conf['columns'][c]['data']]),
                                     ),
-                                  ],
-                                ),
-                              );
-                            }
-                            return Stack(
-                              children: [
-                                Card(
-                                  color: cardColor(data[i]['id']),
-                                  child: InkWell(
-                                    onLongPress: () =>
-                                        cardLongPress(data[i]['id']),
-                                    onTap: () => cardTap(data[i]['id']),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(9.0),
-                                      child: Table(
-                                        border: TableBorder(
-                                          horizontalInside: BorderSide(
-                                            color: Colors.grey[200],
-                                            width: 0.5,
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          return Stack(
+                            children: [
+                              Card(
+                                color: cardColor(data[i]['id']),
+                                child: InkWell(
+                                  onLongPress: () =>
+                                      cardLongPress(data[i]['id']),
+                                  onTap: () => cardTap(data[i]['id']),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(9.0),
+                                    child: Row(
+                                      children: <Widget>[
+                                        // Padding(
+                                        //   padding: const EdgeInsets.all(5.0),
+                                        //   child: Image.network(
+                                        //     'https://picsum.photos/60?$i',
+                                        //     height: 60,
+                                        //   ),
+                                        // ),
+                                        Expanded(
+                                          child: Table(
+                                            border: TableBorder(
+                                              horizontalInside: BorderSide(
+                                                color: Colors.grey[200],
+                                                width: 0.5,
+                                              ),
+                                            ),
+                                            columnWidths: {
+                                              0: IntrinsicColumnWidth()
+                                            },
+                                            defaultVerticalAlignment:
+                                                TableCellVerticalAlignment
+                                                    .middle,
+                                            children: rows,
                                           ),
                                         ),
-                                        columnWidths: {
-                                          0: IntrinsicColumnWidth()
-                                        },
-                                        defaultVerticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        children: rows,
-                                      ),
+                                      ],
                                     ),
                                   ),
                                 ),
-                                selectMode
-                                    ? Align(
-                                        alignment: Alignment.topRight,
-                                        child: Padding(
-                                          padding: EdgeInsets.all(8.0),
-                                          child: Icon(
-                                            selectedIds.indexOf(
-                                                        data[i]['id']) >=
-                                                    0
-                                                ? Icons.check_box
-                                                : Icons.check_box_outline_blank,
-                                            color: selectedIds.indexOf(
-                                                        data[i]['id']) >=
-                                                    0
-                                                ? Colors.blue
-                                                : Colors.grey,
-                                          ),
+                              ),
+                              selectMode
+                                  ? Align(
+                                      alignment: Alignment.topRight,
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Icon(
+                                          selectedIds.indexOf(data[i]['id']) >=
+                                                  0
+                                              ? Icons.check_box
+                                              : Icons.check_box_outline_blank,
+                                          color: selectedIds
+                                                      .indexOf(data[i]['id']) >=
+                                                  0
+                                              ? Colors.blue
+                                              : Colors.grey,
                                         ),
-                                      )
-                                    : Container(),
-                              ],
-                            );
-                          },
-                        ),
+                                      ),
+                                    )
+                                  : Container(),
+                            ],
+                          );
+                        },
                       ),
                       loading || deleting
                           ? Center(child: CircularProgressIndicator())
