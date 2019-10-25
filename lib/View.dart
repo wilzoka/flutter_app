@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_app/Utils.dart';
 import 'ViewTable.dart';
@@ -10,6 +12,11 @@ class View extends StatefulWidget {
 class ViewState extends State<View> {
   String title = '';
   Map currentview = {};
+  Map profile = {
+    'id': null,
+    'fullname': '',
+    'email': '',
+  };
 
   List<Widget> menu = [];
 
@@ -25,6 +32,8 @@ class ViewState extends State<View> {
     for (int i = 0; i < m.length; i++) {
       menu.add(Utils.recursiveMenu(context, m[i], viewSelect));
     }
+    profile = await Utils.loadProfile();
+    if (mounted) setState(() {});
   }
 
   @override
@@ -51,8 +60,48 @@ class ViewState extends State<View> {
             )
           : Container(),
       drawer: Drawer(
-        child: ListView(
-          children: menu,
+        child: Column(
+          children: <Widget>[
+            UserAccountsDrawerHeader(
+              accountName: Text(profile['fullname']),
+              accountEmail: Text(profile['email']),
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.blue,
+                backgroundImage: NetworkImage(
+                    'https://www.w3schools.com/w3images/avatar2.png'),
+              ),
+              otherAccountsPictures: <Widget>[
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(20.0),
+                    ),
+                  ),
+                  child: IconButton(
+                    color: Colors.blue,
+                    icon: Icon(Icons.edit),
+                    onPressed: () {},
+                  ),
+                ),
+              ],
+            ),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.all(0),
+                children: menu,
+              ),
+            ),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.exit_to_app),
+              title: Text('Sair'),
+              onTap: () {
+                Utils.removePreference('token');
+                Navigator.pushReplacementNamed(context, 'login');
+              },
+            )
+          ],
         ),
       ),
     );

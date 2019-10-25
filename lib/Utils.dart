@@ -38,13 +38,6 @@ class Utils {
     }
   }
 
-  static String parseDecimal(String value) {
-    print('parse $value');
-    final formatter = new NumberFormat("####.00", 'pt');
-    print(formatter.format(double.parse(value)));
-    return formatter.format(double.parse(value));
-  }
-
   static Future selectDate(BuildContext context, String value) async {
     final DateTime picked = await showDatePicker(
         context: context,
@@ -117,9 +110,18 @@ class Utils {
   }
 
   static Future loadMenu() async {
-    var j = await Utils.requestGet('config/menu');
+    final j = await Utils.requestGet('config/menu');
     if (j['success']) {
       return j['menu'];
+    } else {
+      return [];
+    }
+  }
+
+  static Future loadProfile() async {
+    final j = await Utils.requestGet('config/profile');
+    if (j['success']) {
+      return j['profile'];
     } else {
       return [];
     }

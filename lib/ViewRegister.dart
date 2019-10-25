@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_app/Utils.dart';
 import 'package:flutter_app/ViewTable.dart';
+import 'package:flutter_app/components/carousel_slider.dart.dart';
 import 'package:flutter_app/formatters/Decimal.dart';
 import 'Autocomplete.dart';
 
@@ -42,25 +45,28 @@ class ViewRegisterState extends State<ViewRegister> {
   Future<void> initAsync() async {
     conf = await Utils.requestGet('v/${widget.viewurl}/${widget.id}/config');
     if (conf['success']) {
-      setState(() {
-        title = conf['view']['name'];
-        buildUI();
-      });
+      if (mounted)
+        setState(() {
+          title = conf['view']['name'];
+          buildUI();
+        });
     }
   }
 
-  void buildUI() {
+  void buildUI() async {
     for (int i = 0; i < conf['zone'].length; i++) {
       final zone = conf['zone'][i];
-      tabs.add(
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(conf['zones'][zone]['description'] ?? zone),
-        ),
-      );
       tabfields[zone] = [];
       if (conf['zones'][zone]['subview'] != null) {
         final Map subview = conf['zones'][zone]['subview'];
+        tabs.add(
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(subview['description'] ??
+                conf['zones'][zone]['description'] ??
+                zone),
+          ),
+        );
         tabscontainer.add(
           ViewTable(
             key: ValueKey(subview['url']),
@@ -69,6 +75,12 @@ class ViewRegisterState extends State<ViewRegister> {
           ),
         );
       } else {
+        tabs.add(
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(conf['zones'][zone]['description'] ?? zone),
+          ),
+        );
         for (int z = 0; z < conf['zones'][zone]['fields'].length; z++) {
           Map field = conf['fields'][conf['zones'][zone]['fields'][z]];
           field['label'] += field['notnull'] ? '*' : '';
@@ -287,6 +299,32 @@ class ViewRegisterState extends State<ViewRegister> {
                 ],
               ),
             );
+          } else if (field['type'] == 'file') {
+            if (field['value'] != null) {
+              final values = jsonDecode(field['value']);
+              List<Widget> items = [];
+              for (int x = 0; x < values.length; x++) {
+                print(values[x]);
+                items.add(Container(
+                  width: MediaQuery.of(context).size.width,
+                  margin: EdgeInsets.symmetric(horizontal: 5.0),
+                  decoration: BoxDecoration(color: Colors.white),
+                  child: Image.network(
+                    '${Utils.mainurl}/file/${values[x]['id']}',
+                  ),
+                ));
+              }
+              tabfields[zone].add(
+                Padding(
+                  padding: fieldPadding,
+                  child: CarouselSlider(                    
+                    height: 200.0,
+                    enlargeCenterPage: true,
+                    items: items,
+                  ),
+                ),
+              );
+            }
           } else if (field['type'] == 'integer') {
             if (!fieldcontroller.containsKey(field['name']))
               fieldcontroller[field['name']] = TextEditingController(
@@ -458,7 +496,9 @@ class ViewRegisterState extends State<ViewRegister> {
           title: Text(title),
         ),
         body: Center(
-          child: CircularProgressIndicator(),
+          child: conf.containsKey('success') && conf['success']
+              ? Container()
+              : CircularProgressIndicator(),
         ),
       );
     } else if (tabs.length == 1) {
