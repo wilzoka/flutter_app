@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_app/Utils.dart';
 import 'package:flutter_app/ViewTable.dart';
-import 'package:flutter_app/components/carousel_slider.dart.dart';
+import 'package:flutter_app/components/carousel_slider.dart';
 import 'package:flutter_app/formatters/Decimal.dart';
 import 'Autocomplete.dart';
 
@@ -301,26 +301,21 @@ class ViewRegisterState extends State<ViewRegister> {
             );
           } else if (field['type'] == 'file') {
             if (field['value'] != null) {
-              final values = jsonDecode(field['value']);
-              List<Widget> items = [];
-              for (int x = 0; x < values.length; x++) {
-                print(values[x]);
-                items.add(Container(
-                  width: MediaQuery.of(context).size.width,
-                  margin: EdgeInsets.symmetric(horizontal: 5.0),
-                  decoration: BoxDecoration(color: Colors.white),
-                  child: Image.network(
-                    '${Utils.mainurl}/file/${values[x]['id']}',
-                  ),
-                ));
-              }
+              fieldcontroller[field['name']] = jsonDecode(field['value']);
               tabfields[zone].add(
                 Padding(
                   padding: fieldPadding,
-                  child: CarouselSlider(                    
-                    height: 200.0,
+                  child: CarouselSlider(
+                    height: 150.0,
                     enlargeCenterPage: true,
-                    items: items,
+                    enableInfiniteScroll: false,
+                    onRemove: (index) {
+                      fieldcontroller[field['name']].removeAt(index);
+                    },
+                    onAdd: (item) {
+                      fieldcontroller[field['name']].add(item);
+                    },
+                    items: fieldcontroller[field['name']],
                   ),
                 ),
               );

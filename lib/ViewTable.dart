@@ -260,7 +260,7 @@ class ViewTableState extends State<ViewTable> {
     selectedIds = [];
     fastsearchController.dispose();
     scrollController.dispose();
-    if (timer != null) timer.cancel();
+    timer?.cancel();
     super.dispose();
   }
 

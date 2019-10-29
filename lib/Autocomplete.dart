@@ -40,7 +40,7 @@ class AutocompleteState extends State<Autocomplete> {
   void dispose() {
     searchController.dispose();
     items = [];
-    if (timer != null) timer.cancel();
+    timer?.cancel();
     super.dispose();
   }
 
