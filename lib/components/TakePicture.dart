@@ -25,7 +25,7 @@ class TakePictureState extends State<TakePicture> {
 
   void onCameraSelected(CameraDescription cameraDescription) async {
     if (_controller != null) await _controller.dispose();
-    _controller = CameraController(cameraDescription, ResolutionPreset.medium);
+    _controller = CameraController(cameraDescription, ResolutionPreset.veryHigh);
     try {
       await _controller.initialize();
     } on CameraException catch (e) {
@@ -88,7 +88,7 @@ class TakePictureState extends State<TakePicture> {
                   icon: Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: Icon(
-                      Icons.camera_alt,
+                      Icons.camera_rear,
                       color: Colors.white,
                     ),
                   ),
@@ -98,7 +98,7 @@ class TakePictureState extends State<TakePicture> {
                   icon: Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: Icon(
-                      Icons.camera_rear,
+                      Icons.camera_alt,
                       color: Colors.white,
                     ),
                   ),
@@ -110,7 +110,7 @@ class TakePictureState extends State<TakePicture> {
                   icon: Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: Icon(
-                      Icons.check,
+                      Icons.refresh,
                       color: Colors.white,
                     ),
                   ),
@@ -120,7 +120,7 @@ class TakePictureState extends State<TakePicture> {
                   icon: Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: Icon(
-                      Icons.refresh,
+                      Icons.check,
                       color: Colors.white,
                     ),
                   ),
@@ -129,28 +129,31 @@ class TakePictureState extends State<TakePicture> {
         onTap: (index) async {
           if (lastPicture == null) {
             if (index == 0) {
+              nextCamera();
+            } else if (index == 1) {
               try {
                 lastPicture = join(
                   (await getTemporaryDirectory()).path,
-                  '${DateTime.now()}.png',
+                  '${DateTime.now()}.jpg'
+                      .replaceAll(' ', '')
+                      .replaceAll(':', '')
+                      .replaceAll('-', ''),
                 );
                 await _controller.takePicture(lastPicture);
                 setState(() {});
               } catch (e) {
                 print(e);
               }
-            } else if (index == 1) {
-              nextCamera();
             }
           } else {
             if (index == 0) {
+              lastPicture = null;
+              setState(() {});
+            } else if (index == 1) {
               Navigator.pop(
                 context,
                 lastPicture,
               );
-            } else if (index == 1) {
-              lastPicture = null;
-              setState(() {});
             }
           }
         },

@@ -300,26 +300,64 @@ class ViewRegisterState extends State<ViewRegister> {
               ),
             );
           } else if (field['type'] == 'file') {
-            if (field['value'] != null) {
-              fieldcontroller[field['name']] = jsonDecode(field['value']);
-              tabfields[zone].add(
-                Padding(
-                  padding: fieldPadding,
-                  child: CarouselSlider(
-                    height: 150.0,
-                    enlargeCenterPage: true,
-                    enableInfiniteScroll: false,
-                    onRemove: (index) {
-                      fieldcontroller[field['name']].removeAt(index);
-                    },
-                    onAdd: (item) {
-                      fieldcontroller[field['name']].add(item);
-                    },
-                    items: fieldcontroller[field['name']],
+            fieldcontroller[field['name']] =
+                field['value'] == null ? [] : jsonDecode(field['value']);
+            tabfields[zone].add(
+              Padding(
+                padding: fieldPadding,
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.grey,
+                    ),
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(5),
+                    ),
+                  ),
+                  child: Stack(
+                    children: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.all(5.0),
+                        child: CarouselSlider(
+                          height: 150.0,
+                          enlargeCenterPage: true,
+                          enableInfiniteScroll: false,
+                          onRemove: (index) {
+                            fieldcontroller[field['name']].removeAt(index);
+                          },
+                          onAdd: (item) {
+                            fieldcontroller[field['name']].add(item);
+                          },
+                          items: fieldcontroller[field['name']],
+                        ),
+                      ),
+                      Positioned(
+                        top: 0,
+                        child: Container(
+                          width: MediaQuery.of(context).size.width - 25,
+                          child: Center(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(10),
+                                ),
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                child: Text(
+                                  field['label'],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              );
-            }
+              ),
+            );
           } else if (field['type'] == 'integer') {
             if (!fieldcontroller.containsKey(field['name']))
               fieldcontroller[field['name']] = TextEditingController(
@@ -415,6 +453,8 @@ class ViewRegisterState extends State<ViewRegister> {
       if (value['enabled']) {
         if (value['type'] == 'boolean') {
           body[key] = fieldcontroller[key].text == 'Sim' ? 'true' : 'false';
+        } else if (value['type'] == 'file') {
+          body[key] = jsonEncode(fieldcontroller[key]);
         } else if ([
               'autocomplete',
               'date',
@@ -429,6 +469,7 @@ class ViewRegisterState extends State<ViewRegister> {
         }
       }
     });
+    print(body);
     lastSaveRequest = await Utils.requestPost(
         'v/${widget.viewurl}/${widget.id}' +
             (widget.parent == null ? '' : '?parent=${widget.parent}'),
@@ -512,12 +553,24 @@ class ViewRegisterState extends State<ViewRegister> {
             )
           ],
         ),
-        body: Container(
-          margin: const EdgeInsets.all(10),
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              children: tabfields[conf['zone'][0]],
+        body: Form(
+          key: _formKey,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(
+                color: Colors.grey[400],
+              ),
+              borderRadius: BorderRadius.all(
+                Radius.circular(8.0),
+              ),
+            ),
+            margin: EdgeInsets.all(4),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ListView(
+                children: tabfields[conf['zone'][0]],
+              ),
             ),
           ),
         ),

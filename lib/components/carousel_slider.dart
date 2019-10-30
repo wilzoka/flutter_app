@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/Utils.dart';
+import 'package:flutter_app/components/FileDownloader.dart';
 import 'package:flutter_app/components/FileUploader.dart';
+import 'package:flutter_app/components/FileDownloader.dart';
 import 'package:flutter_app/components/TakePicture.dart';
 
 class CarouselSlider extends StatefulWidget {
@@ -252,7 +254,11 @@ class _CarouselSliderState extends State<CarouselSlider>
               width: MediaQuery.of(context).size.width,
               margin: EdgeInsets.symmetric(horizontal: 5.0),
               height: double.maxFinite,
-              decoration: BoxDecoration(color: Colors.white),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Colors.grey[300],
+                ),
+              ),
               child:
                   widget.items[index]['mimetype'].toString().contains('image/')
                       ? Image.network(
@@ -283,7 +289,7 @@ class _CarouselSliderState extends State<CarouselSlider>
                   return Container();
                 }
                 double value = widget.pageController.page - i;
-                value = (1 - (value.abs() * 0.3)).clamp(0.0, 1.0);
+                value = (1 - (value.abs() * 0.65)).clamp(0.0, 1.0);
 
                 final double height = widget.height ??
                     MediaQuery.of(context).size.width *
@@ -306,37 +312,6 @@ class _CarouselSliderState extends State<CarouselSlider>
               },
             );
           },
-        ),
-      ),
-      Positioned(
-        top: 0,
-        right: 0,
-        child: Container(
-          height: 35,
-          width: 35,
-          decoration: BoxDecoration(
-            color: Colors.red,
-            borderRadius: BorderRadius.all(
-              Radius.circular(25.0),
-            ),
-          ),
-          child: IconButton(
-            splashColor: Colors.transparent,
-            highlightColor: Colors.transparent,
-            color: Colors.white,
-            onPressed: () {
-              int currentPage = _getRealIndex(
-                  widget.pageController.page.toInt(),
-                  widget.realPage,
-                  widget.items.length);
-              widget.onRemove(currentPage);
-              setState(() {});
-            },
-            icon: Icon(
-              Icons.delete_outline,
-              size: 18,
-            ),
-          ),
         ),
       ),
       Positioned(
@@ -363,7 +338,7 @@ class _CarouselSliderState extends State<CarouselSlider>
                 ),
               );
               if (filePath != null) {
-                await Navigator.push(
+                final file = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => FileUploader(
@@ -371,15 +346,11 @@ class _CarouselSliderState extends State<CarouselSlider>
                     ),
                   ),
                 );
+                if (file != null) {
+                  widget.onAdd(file);
+                  widget.jumpToPage(widget.items.length);
+                }
               }
-              // final item = {
-              //   "id": 3181,
-              //   "filename": "favicon.jpg",
-              //   "mimetype": "image/jpeg",
-              //   "size": 27369,
-              //   "type": "jpg"
-              // };
-              // widget.onAdd(item);
               setState(() {});
             },
             icon: Icon(
@@ -389,6 +360,99 @@ class _CarouselSliderState extends State<CarouselSlider>
           ),
         ),
       ),
+      // Positioned(
+      //   bottom: 0,
+      //   left: 0,
+      //   child: Container(
+      //     height: 35,
+      //     width: 35,
+      //     decoration: BoxDecoration(
+      //       color: Colors.blue,
+      //       borderRadius: BorderRadius.all(
+      //         Radius.circular(25.0),
+      //       ),
+      //     ),
+      //     child: IconButton(
+      //       splashColor: Colors.transparent,
+      //       highlightColor: Colors.transparent,
+      //       color: Colors.white,
+      //       onPressed: () async {},
+      //       icon: Icon(
+      //         Icons.insert_drive_file,
+      //         size: 18,
+      //       ),
+      //     ),
+      //   ),
+      // ),
+      widget.items.length == 0
+          ? Container()
+          : Positioned(
+              top: 0,
+              right: 0,
+              child: Container(
+                height: 35,
+                width: 35,
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(25.0),
+                  ),
+                ),
+                child: IconButton(
+                  splashColor: Colors.transparent,
+                  highlightColor: Colors.transparent,
+                  color: Colors.white,
+                  onPressed: () {
+                    int currentPage = _getRealIndex(
+                        widget.pageController.page.toInt(),
+                        widget.realPage,
+                        widget.items.length);
+                    widget.onRemove(currentPage);
+                    setState(() {});
+                  },
+                  icon: Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ),
+      widget.items.length == 0
+          ? Container()
+          : Positioned(
+              top: 0,
+              left: 0,
+              child: Container(
+                height: 35,
+                width: 35,
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(25.0),
+                  ),
+                ),
+                child: IconButton(
+                  splashColor: Colors.transparent,
+                  highlightColor: Colors.transparent,
+                  color: Colors.white,
+                  onPressed: () async {
+                    int i = _getRealIndex(widget.pageController.page.toInt(),
+                        widget.realPage, widget.items.length);
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            FileDownloader(file: widget.items[i]),
+                      ),
+                    );
+                  },
+                  icon: Icon(
+                    Icons.file_download,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ),
     ]);
   }
 }

@@ -1,50 +1,50 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_app/Utils.dart';
 import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
 
-class FileUploader extends StatefulWidget {
-  final String filePath;
+class FileDownloader extends StatefulWidget {
+  final Map file;
 
-  const FileUploader({
+  const FileDownloader({
     Key key,
-    @required this.filePath,
+    @required this.file,
   }) : super(key: key);
 
   @override
-  FileUploaderState createState() => FileUploaderState();
+  FileDownloaderState createState() => FileDownloaderState();
 }
 
-class FileUploaderState extends State<FileUploader> {
+class FileDownloaderState extends State<FileDownloader> {
   double percent = 0.0;
   Dio dio = Dio();
   String erro = '';
   CancelToken cancelToken = CancelToken();
 
   void initAsync() async {
-    final filename = widget.filePath.split('/').last;
-    FormData formData = FormData.fromMap(
-      {
-        "file": await MultipartFile.fromFile(
-          widget.filePath,
-          filename: filename,
-        ),
-      },
-    );
-    final response = await dio.post("${Utils.mainurl}/file",
-        cancelToken: cancelToken,
-        data: formData,
-        options: Options(
-          headers: {
-            'x-access-token': await Utils.getPreference('token'),
-          },
-        ), onSendProgress: (int sent, int total) {
+    final response =
+        await dio.get('${Utils.mainurl}/file/${widget.file['id'].toString()}',
+            options: Options(
+              responseType: ResponseType.bytes,
+              followRedirects: false,
+            ), onReceiveProgress: (int sent, int total) {
       if (mounted)
         setState(() {
           percent = sent / total;
         });
     });
     if (response.statusCode == 200) {
-      Navigator.pop(context, response.data['data']);
+      final savePath = (await getTemporaryDirectory()).path;
+      final filePath = '$savePath/${widget.file['filename']}';
+      File file = File(filePath);
+      var raf = file.openSync(mode: FileMode.write);
+      raf.writeFromSync(response.data);
+      OpenFile.open(filePath);
+      await raf.close();
+      Navigator.pop(context);
     } else {}
   }
 
@@ -65,14 +65,14 @@ class FileUploaderState extends State<FileUploader> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Upload de Arquivo'),
+        title: Text('Download de Arquivo'),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Text(
-              erro.isEmpty ? 'Enviando... ${(percent*100).toInt()}%' : erro,
+              erro.isEmpty ? 'Baixando... ${(percent * 100).toInt()}%' : erro,
               style: TextStyle(fontSize: 20),
             ),
             SizedBox(height: 10),
