@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/Utils.dart';
 import 'package:flutter_app/components/FileDownloader.dart';
 import 'package:flutter_app/components/FileUploader.dart';
-import 'package:flutter_app/components/FileDownloader.dart';
 import 'package:flutter_app/components/TakePicture.dart';
 
 class CarouselSlider extends StatefulWidget {
