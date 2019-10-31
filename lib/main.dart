@@ -5,6 +5,7 @@ import 'package:flutter_app/View.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
+  Utils.jwt = await Utils.getPreference('token');
   runApp(
     MaterialApp(
         title: 'App',

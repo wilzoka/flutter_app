@@ -25,7 +25,7 @@ class TakePictureState extends State<TakePicture> {
 
   void onCameraSelected(CameraDescription cameraDescription) async {
     if (_controller != null) await _controller.dispose();
-    _controller = CameraController(cameraDescription, ResolutionPreset.veryHigh);
+    _controller = CameraController(cameraDescription, ResolutionPreset.high);
     try {
       await _controller.initialize();
     } on CameraException catch (e) {

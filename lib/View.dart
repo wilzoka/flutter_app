@@ -62,7 +62,7 @@ class ViewState extends State<View> {
           children: <Widget>[
             UserAccountsDrawerHeader(
               accountName: Text(profile['fullname']),
-              accountEmail: Text(profile['email']),
+              accountEmail: Text(profile['email'] ?? ''),
               currentAccountPicture: CircleAvatar(
                 backgroundColor: Colors.blue,
                 backgroundImage: NetworkImage(

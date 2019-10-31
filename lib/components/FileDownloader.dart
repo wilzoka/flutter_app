@@ -25,12 +25,13 @@ class FileDownloaderState extends State<FileDownloader> {
   CancelToken cancelToken = CancelToken();
 
   void initAsync() async {
-    final response =
-        await dio.get('${Utils.mainurl}/file/${widget.file['id'].toString()}',
-            options: Options(
-              responseType: ResponseType.bytes,
-              followRedirects: false,
-            ), onReceiveProgress: (int sent, int total) {
+    final response = await dio.get(
+        '${Utils.mainurl}/file/${widget.file['id'].toString()}',
+        options: Options(
+            responseType: ResponseType.bytes,
+            followRedirects: false,
+            headers: {'x-access-token': Utils.jwt}),
+        onReceiveProgress: (int sent, int total) {
       if (mounted)
         setState(() {
           percent = sent / total;

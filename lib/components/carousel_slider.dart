@@ -5,6 +5,7 @@ import 'package:flutter_app/Utils.dart';
 import 'package:flutter_app/components/FileDownloader.dart';
 import 'package:flutter_app/components/FileUploader.dart';
 import 'package:flutter_app/components/TakePicture.dart';
+import 'package:extended_image/extended_image.dart';
 
 class CarouselSlider extends StatefulWidget {
   CarouselSlider(
@@ -260,8 +261,28 @@ class _CarouselSliderState extends State<CarouselSlider>
               ),
               child:
                   widget.items[index]['mimetype'].toString().contains('image/')
-                      ? Image.network(
+                      ? ExtendedImage.network(
                           '${Utils.mainurl}/file/${widget.items[index]['id']}',
+                          headers: {'x-access-token': Utils.jwt},
+                          cache: false,
+                          loadStateChanged: (ExtendedImageState state) {
+                            switch (state.extendedImageLoadState) {
+                              case LoadState.loading:
+                                return Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                                break;
+                              case LoadState.completed:
+                                return state.completedWidget;
+                                break;
+                              case LoadState.failed:
+                                return Center(
+                                  child: Icon(Icons.error),
+                                );
+                                break;
+                            }
+                            return null;
+                          },
                         )
                       : Column(
                           mainAxisAlignment: MainAxisAlignment.center,

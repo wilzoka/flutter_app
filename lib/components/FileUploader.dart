@@ -35,7 +35,7 @@ class FileUploaderState extends State<FileUploader> {
         data: formData,
         options: Options(
           headers: {
-            'x-access-token': await Utils.getPreference('token'),
+            'x-access-token': Utils.jwt,
           },
         ), onSendProgress: (int sent, int total) {
       if (mounted)
