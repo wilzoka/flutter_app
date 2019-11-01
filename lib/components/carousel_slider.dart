@@ -264,7 +264,7 @@ class _CarouselSliderState extends State<CarouselSlider>
                       ? ExtendedImage.network(
                           '${Utils.mainurl}/file/${widget.items[index]['id']}',
                           headers: {'x-access-token': Utils.jwt},
-                          cache: false,
+                          cache: true,
                           loadStateChanged: (ExtendedImageState state) {
                             switch (state.extendedImageLoadState) {
                               case LoadState.loading:

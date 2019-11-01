@@ -95,7 +95,7 @@ class ViewState extends State<View> {
               leading: Icon(Icons.exit_to_app),
               title: Text('Sair'),
               onTap: () {
-                Utils.removePreference('token');
+                Utils.removeJwt();
                 Navigator.pushReplacementNamed(context, 'login');
               },
             )

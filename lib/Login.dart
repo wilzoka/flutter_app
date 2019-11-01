@@ -30,8 +30,7 @@ class LoginState extends State<Login> {
       'password': controllers['password'].text
     });
     if (j['success']) {
-      Utils.jwt = j['token'];
-      Utils.setPreference('jwt', j['token']);
+      Utils.setJwt(j['token']);
       Navigator.pushReplacementNamed(
         context,
         'view',

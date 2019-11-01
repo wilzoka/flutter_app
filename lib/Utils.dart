@@ -6,9 +6,19 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Utils {
-  static const String mainurl = 'http://192.168.0.107:8080';
+  static const String mainurl = 'http://191.239.240.29';
 
   static String jwt;
+
+  static void setJwt(jwt) {
+    Utils.jwt = jwt;
+    Utils.setPreference('token', jwt);
+  }
+
+  static void removeJwt() {
+    Utils.jwt = null;
+    Utils.removePreference('token');
+  }
 
   static nonEmptyValidator(String value) {
     return value.isEmpty ? 'Campo Obrigatório' : null;
@@ -64,8 +74,8 @@ class Utils {
   }
 
   static Future<Map> requestGet(String url) async {
-    final response = await http.get('$mainurl/$url',
-        headers: {'x-access-token': Utils.jwt});
+    final response =
+        await http.get('$mainurl/$url', headers: {'x-access-token': Utils.jwt});
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -75,8 +85,7 @@ class Utils {
 
   static Future<Map> requestPost(String url, Map body) async {
     final response = await http.post('$mainurl/$url',
-        headers: {'x-access-token': Utils.jwt},
-        body: body);
+        headers: {'x-access-token': Utils.jwt}, body: body);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -85,8 +94,9 @@ class Utils {
   }
 
   static Future<bool> checkToken() async {
-    final response = await http.get('$mainurl/home',
-        headers: {'x-access-token': Utils.jwt});
+    if (Utils.jwt == null) return false;
+    final response =
+        await http.get('$mainurl/home', headers: {'x-access-token': Utils.jwt});
     return response.statusCode == 200;
   }
 
