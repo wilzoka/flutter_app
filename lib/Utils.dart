@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Utils {
-  static const String mainurl = 'http://191.239.240.29';
+  static const String mainurl = 'http://172.10.30.33:8080';
 
   static String jwt;
 

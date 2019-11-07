@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/Utils.dart';
+import 'package:flutter_app/ViewRegister.dart';
 import 'ViewTable.dart';
 
 class View extends StatefulWidget {
@@ -63,11 +64,17 @@ class ViewState extends State<View> {
             UserAccountsDrawerHeader(
               accountName: Text(profile['fullname']),
               accountEmail: Text(profile['email'] ?? ''),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.blue,
-                backgroundImage: NetworkImage(
-                    'https://www.w3schools.com/w3images/avatar2.png'),
-              ),
+              currentAccountPicture: profile['image'] == null
+                  ? Container(child: Icon(Icons.person))
+                  : CircleAvatar(
+                      backgroundColor: Colors.blue,
+                      backgroundImage: NetworkImage(
+                        '${Utils.mainurl}/file/${profile['image']['id']}',
+                        headers: {
+                          'x-access-token': Utils.jwt,
+                        },
+                      ),
+                    ),
               otherAccountsPictures: <Widget>[
                 Container(
                   decoration: BoxDecoration(
@@ -79,7 +86,23 @@ class ViewState extends State<View> {
                   child: IconButton(
                     color: Colors.blue,
                     icon: Icon(Icons.edit),
-                    onPressed: () {},
+                    onPressed: () async {
+                      final lsr = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ViewRegister(
+                            key: ValueKey('profile'),
+                            id: profile['id'].toString(),
+                            viewurl: 'profile',
+                          ),
+                        ),
+                      );
+                      if (lsr != null) {
+                        profile = await Utils.loadProfile();
+                        setState(() {});
+                        print('loaded $profile');
+                      }
+                    },
                   ),
                 ),
               ],
